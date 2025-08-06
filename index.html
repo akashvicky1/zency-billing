@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Zency Invoice</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Zency Invoice Generator</h1>
+
+    <form id="invoiceForm">
+      <input type="text" placeholder="Customer Name" id="customerName" required />
+      <input type="text" placeholder="Mobile Number" id="customerMobile" required />
+      <input type="text" placeholder="Address" id="customerAddress" required />
+
+      <div id="itemsContainer">
+        <div class="item">
+          <input type="text" placeholder="Item Name" class="itemName" required />
+          <input type="number" placeholder="Qty" class="itemQty" required />
+          <input type="number" placeholder="Price" class="itemPrice" required />
+        </div>
+      </div>
+
+      <button type="button" onclick="addItem()">+ Add Item</button>
+      <button type="submit">Generate & Email Invoice</button>
+    </form>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jspdf"></script>
+  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+  <script>
+    emailjs.init("DiNInZXTSIafrnipS"); // YOUR PUBLIC KEY
+  </script>
+  <script src="js/invoice.js"></script>
+  <script src="js/script.js"></script>
+</body>
+</html>
