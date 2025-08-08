@@ -1,18 +1,88 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Sales Report</title>
+  <title>Zency Invoice Report</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
-    <h1>Sales Report</h1>
-    <button onclick="filter('week')">This Week</button>
-    <button onclick="filter('month')">This Month</button>
-    <button onclick="filter('year')">This Year</button>
+    <h1>Zency Invoice</h1>
 
-    <div id="reportResult" style="margin-top: 20px;"></div>
+    <div id="customerDetails" style="margin-bottom: 20px;"></div>
+
+    <table border="1" width="100%" cellpadding="8" cellspacing="0">
+      <thead>
+        <tr>
+          <th>Item Name</th>
+          <th>Qty</th>
+          <th>Price</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody id="itemTable"></tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3" align="right"><b>Grand Total</b></td>
+          <td id="grandTotal"></td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <br>
+    <button id="sendEmailBtn">📧 Send Invoice to Customer</button>
   </div>
-  <script src="js/report.js"></script>
+
+  <!-- EmailJS Library -->
+  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+  <script>
+    emailjs.init("YOUR_PUBLIC_KEY"); // <-- Yaha apna EmailJS public key daalna
+
+    // Data load from localStorage
+    const data = JSON.parse(localStorage.getItem("invoiceData"));
+    if (!data) {
+      document.body.innerHTML = "<h2>No invoice data found!</h2>";
+    } else {
+      // Show customer details
+      document.getElementById("customerDetails").innerHTML = `
+        <b>Customer Name:</b> ${data.customer} <br>
+        <b>Mobile:</b> ${data.mobile} <br>
+        <b>Address:</b> ${data.address}
+      `;
+
+      // Fill items in table
+      let grandTotal = 0;
+      let tableRows = "";
+      data.items.forEach(item => {
+        let total = item.qty * item.price;
+        grandTotal += total;
+        tableRows += `
+          <tr>
+            <td>${item.name}</td>
+            <td>${item.qty}</td>
+            <td>₹${item.price.toFixed(2)}</td>
+            <td>₹${total.toFixed(2)}</td>
+          </tr>
+        `;
+      });
+
+      document.getElementById("itemTable").innerHTML = tableRows;
+      document.getElementById("grandTotal").innerText = "₹" + grandTotal.toFixed(2);
+
+      // Send email
+      document.getElementById("sendEmailBtn").addEventListener("click", function(){
+        emailjs.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", {
+          customer_name: data.customer,
+          mobile_number: data.mobile,
+          address: data.address,
+          total_amount: grandTotal,
+          invoice_details: JSON.stringify(data.items)
+        }).then(function(response) {
+            alert("✅ Invoice sent successfully!");
+        }, function(error) {
+            alert("❌ Failed to send invoice.");
+        });
+      });
+    }
+  </script>
 </body>
 </html>
