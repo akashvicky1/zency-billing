@@ -1,67 +1,29 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Zency Invoice Generator</title>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <title>Sales Report Form</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #121212; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        form { background: #1e1e1e; padding: 20px; border-radius: 10px; width: 300px; }
+        input, textarea { width: 100%; padding: 10px; margin: 8px 0; border-radius: 5px; border: none; }
+        button { background: #ff9800; color: white; border: none; padding: 10px; width: 100%; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #e68900; }
+        .msg { margin-top: 10px; font-size: 14px; }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Zency Invoice Generator</h1>
-    <input type="text" id="customerName" placeholder="Customer Name" />
-    <input type="text" id="mobileNumber" placeholder="Mobile Number" />
-    <input type="text" id="address" placeholder="Address" />
 
-    <div id="itemsContainer">
-      <div class="item-row">
-        <input type="text" class="itemName" placeholder="Item Name" />
-        <input type="number" class="itemQty" placeholder="Qty" />
-        <input type="number" class="itemPrice" placeholder="Price" />
-      </div>
-    </div>
+    <form id="reportForm">
+        <h2>Send Sales Report</h2>
+        <input type="text" id="name" placeholder="Your Name" required>
+        <input type="email" id="email" placeholder="Your Email" required>
+        <textarea id="message" placeholder="Report Details" required></textarea>
+        <button type="submit">Send Report</button>
+        <div class="msg" id="msg"></div>
+    </form>
 
-    <button onclick="addItem()">+ Add Item</button>
-    <button onclick="generateInvoice()">Generate & Email Invoice</button>
-  </div>
-
-  <script>
-    function addItem() {
-      let container = document.getElementById("itemsContainer");
-      let row = document.createElement("div");
-      row.classList.add("item-row");
-      row.innerHTML = `
-        <input type="text" class="itemName" placeholder="Item Name" />
-        <input type="number" class="itemQty" placeholder="Qty" />
-        <input type="number" class="itemPrice" placeholder="Price" />
-      `;
-      container.appendChild(row);
-    }
-
-    function generateInvoice() {
-      let customer = document.getElementById("customerName").value;
-      let mobile = document.getElementById("mobileNumber").value;
-      let address = document.getElementById("address").value;
-
-      let items = [];
-      document.querySelectorAll(".item-row").forEach(row => {
-        let name = row.querySelector(".itemName").value;
-        let qty = parseInt(row.querySelector(".itemQty").value);
-        let price = parseFloat(row.querySelector(".itemPrice").value);
-        if (name && qty && price) {
-          items.push({ name, qty, price });
-        }
-      });
-
-      if (!customer || !mobile || !address || items.length === 0) {
-        alert("⚠️ Please fill all fields and add at least one item!");
-        return;
-      }
-
-      localStorage.setItem("invoiceData", JSON.stringify({
-        customer, mobile, address, items
-      }));
-
-      window.location.href = "report.html";
-    }
-  </script>
+    <script src="smtp.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
