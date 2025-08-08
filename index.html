@@ -1,29 +1,280 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Sales Report Form</title>
-    <style>
-        body { font-family: Arial, sans-serif; background: #121212; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        form { background: #1e1e1e; padding: 20px; border-radius: 10px; width: 300px; }
-        input, textarea { width: 100%; padding: 10px; margin: 8px 0; border-radius: 5px; border: none; }
-        button { background: #ff9800; color: white; border: none; padding: 10px; width: 100%; border-radius: 5px; cursor: pointer; }
-        button:hover { background: #e68900; }
-        .msg { margin-top: 10px; font-size: 14px; }
-    </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Zency — Invoice Generator</title>
+
+<!-- Styles: dark theme, nice invoice look -->
+<style>
+  :root{
+    --bg:#0e0e0f; --panel:#151515; --muted:#bdb5b0; --accent:#ff6b2d;
+    --card-radius:14px;
+  }
+  body{background:var(--bg); color:#eee; font-family:Inter,Roboto,Arial; margin:0; padding:30px; display:flex; justify-content:center;}
+  .wrap{width:980px; max-width:98%; }
+  .top{display:flex; gap:20px; align-items:center; margin-bottom:18px;}
+  .logo{width:90px;height:90px;border-radius:12px;overflow:hidden; background:#111; display:flex;align-items:center;justify-content:center;}
+  .logo img{width:100%;height:100%;object-fit:contain;}
+  h1{margin:0;font-size:28px;color:#fff}
+  .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:18px; border-radius:var(--card-radius); box-shadow:0 8px 30px rgba(0,0,0,0.6);}
+  .form-row{display:flex;gap:10px;margin-top:12px;}
+  input, select, textarea{background:#0b0b0b;border:1px solid #222;padding:10px;border-radius:8px;color:#eee;box-sizing:border-box;}
+  .items{margin-top:14px;}
+  .item-row{display:flex;gap:8px;margin-top:8px;}
+  .item-row input{flex:1;}
+  .item-row .qty{width:90px;}
+  .item-row .price{width:130px;}
+  .btn{background:var(--accent); color:#fff; border:none; padding:10px 14px; border-radius:999px; cursor:pointer;}
+  .btn.secondary{background:#333;color:#ddd}
+  table{width:100%;border-collapse:collapse;margin-top:16px;}
+  th,td{padding:10px;border:1px solid rgba(255,255,255,0.06); text-align:left; font-size:14px; color:var(--muted)}
+  th{color:#fff;background:rgba(255,255,255,0.02)}
+  tfoot td{font-weight:700; color:#fff; font-size:15px;}
+  .actions{display:flex;gap:12px; margin-top:12px;}
+  .small{font-size:13px;color:var(--muted)}
+  .success{color:#7be07b}
+</style>
 </head>
 <body>
+  <div class="wrap">
+    <div class="top">
+      <div class="logo"><img src="images/zp.png" alt="ZP Logo" /></div>
+      <div>
+        <h1>Zency Creation — Invoice Generator</h1>
+        <div class="small">Elegant dark invoice • Returns only if damaged</div>
+      </div>
+    </div>
 
-    <form id="reportForm">
-        <h2>Send Sales Report</h2>
-        <input type="text" id="name" placeholder="Your Name" required>
-        <input type="email" id="email" placeholder="Your Email" required>
-        <textarea id="message" placeholder="Report Details" required></textarea>
-        <button type="submit">Send Report</button>
-        <div class="msg" id="msg"></div>
-    </form>
+    <div class="panel">
+      <!-- Customer -->
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <input id="custName" placeholder="Customer Name" style="flex:2" />
+        <input id="custMobile" placeholder="Mobile Number" style="flex:1" />
+        <input id="custEmail" placeholder="Customer Email (optional)" style="flex:1" />
+      </div>
 
-    <script src="smtp.js"></script>
-    <script src="script.js"></script>
+      <div class="items">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <strong class="small">Items</strong>
+          <button class="btn secondary" id="addItemBtn">+ Add Item</button>
+        </div>
+
+        <div id="itemsList">
+          <!-- one default row inserted by script -->
+        </div>
+
+        <table id="previewTable">
+          <thead>
+            <tr><th>Item Name</th><th style="width:90px">Qty</th><th style="width:140px">Price</th><th style="width:160px">Total</th></tr>
+          </thead>
+          <tbody id="previewBody"></tbody>
+          <tfoot>
+            <tr><td colspan="3" align="right">Grand Total</td><td id="grandTotal">₹0.00</td></tr>
+          </tfoot>
+        </table>
+
+        <div class="actions">
+          <button class="btn" id="generatePdfBtn">Generate PDF & Send</button>
+          <button class="btn secondary" id="downloadPdfBtn">Download PDF</button>
+          <div id="statusMsg" style="margin-left:8px;align-self:center"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <script>
+  // --- helper UI + items management
+  const itemsList = document.getElementById('itemsList');
+  const previewBody = document.getElementById('previewBody');
+  const grandTotalEl = document.getElementById('grandTotal');
+  const statusMsg = document.getElementById('statusMsg');
+
+  function createItemRow(name='', qty=1, price=0){
+    const div = document.createElement('div');
+    div.className = 'item-row';
+    div.innerHTML = `
+      <input class="iname" placeholder="Item name" value="${name}" />
+      <input class="qty" type="number" min="1" value="${qty}" />
+      <input class="price" type="number" min="0" value="${price}" />
+      <button class="btn secondary rm">Remove</button>
+    `;
+    itemsList.appendChild(div);
+    div.querySelector('.rm').addEventListener('click', ()=>{div.remove(); refreshPreview();});
+    ['input','change'].forEach(ev=> div.addEventListener(ev, refreshPreview));
+    return div;
+  }
+
+  document.getElementById('addItemBtn').addEventListener('click', ()=> createItemRow('',1,0) );
+
+  // default two items (you can keep or remove)
+  createItemRow('kurti',1,550);
+  createItemRow('tshirt',2,650);
+
+  function getItems(){
+    const rows = Array.from(itemsList.querySelectorAll('.item-row'));
+    return rows.map(r => {
+      const name = r.querySelector('.iname').value.trim();
+      const qty = parseInt(r.querySelector('.qty').value) || 0;
+      const price = parseFloat(r.querySelector('.price').value) || 0;
+      return {name, qty, price};
+    }).filter(i => i.name && i.qty>0 && i.price>=0);
+  }
+
+  function refreshPreview(){
+    const items = getItems();
+    let gt = 0;
+    previewBody.innerHTML = '';
+    for(const it of items){
+      const t = it.qty * it.price;
+      gt += t;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${it.name}</td><td>${it.qty}</td><td>₹${it.price.toFixed(2)}</td><td>₹${t.toFixed(2)}</td>`;
+      previewBody.appendChild(tr);
+    }
+    grandTotalEl.textContent = '₹' + gt.toFixed(2);
+  }
+
+  refreshPreview();
+
+  // --- PDF generation & send
+  const { jsPDF } = window.jspdf;
+
+  async function buildInvoiceHTMLBlob(filename){
+    // Build a printable invoice element (mirrors preview but stylized for PDF)
+    const wrapper = document.createElement('div');
+    wrapper.style.width = '820px';
+    wrapper.style.background = '#0e0e0f';
+    wrapper.style.color = '#ddd';
+    wrapper.style.padding = '28px';
+    wrapper.style.fontFamily = 'Arial, Helvetica, sans-serif';
+    wrapper.innerHTML = `
+      <div style="display:flex;align-items:center;gap:18px">
+        <img src="images/zp.png" style="width:90px;height:90px;object-fit:contain" />
+        <div>
+          <h2 style="margin:0;color:#fff">Zency Creation</h2>
+          <div style="color:#cfc7c2">Returns only if damaged</div>
+        </div>
+      </div>
+      <hr style="border:none;height:1px;background:#222;margin:16px 0" />
+      <div style="display:flex;justify-content:space-between;gap:10px">
+        <div>
+          <div><strong>Customer:</strong> ${document.getElementById('custName').value || ''}</div>
+          <div><strong>Mobile:</strong> ${document.getElementById('custMobile').value || ''}</div>
+          <div><strong>Email:</strong> ${document.getElementById('custEmail').value || ''}</div>
+        </div>
+        <div style="text-align:right">
+          <div><strong>Invoice No:</strong> ${'ZP' + Date.now().toString().slice(-6)}</div>
+          <div><strong>Date:</strong> ${new Date().toLocaleString()}</div>
+        </div>
+      </div>
+
+      <table style="width:100%;margin-top:14px;border-collapse:collapse">
+        <thead>
+          <tr style="background:#111;color:#fff">
+            <th style="padding:8px;border:1px solid #222;text-align:left">Item</th>
+            <th style="padding:8px;border:1px solid #222;width:80px">Qty</th>
+            <th style="padding:8px;border:1px solid #222;width:120px">Price</th>
+            <th style="padding:8px;border:1px solid #222;width:140px">Total</th>
+          </tr>
+        </thead>
+        <tbody id="pdfBody"></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3" style="padding:8px;border:1px solid #222;text-align:right"><strong>Grand Total</strong></td>
+            <td id="pdfGrand" style="padding:8px;border:1px solid #222"></td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <div style="margin-top:18px;color:#bdb5b0;font-size:13px">
+        Zency Creation — Returns only if damaged. Thank you for shopping with us.
+      </div>
+    `;
+
+    // populate pdfBody and total
+    const pdfBody = wrapper.querySelector('#pdfBody');
+    let total = 0;
+    for(const it of getItems()){
+      const row = document.createElement('tr');
+      const t = it.qty * it.price;
+      total += t;
+      row.innerHTML = `<td style="padding:8px;border:1px solid #222">${it.name}</td>
+                       <td style="padding:8px;border:1px solid #222">${it.qty}</td>
+                       <td style="padding:8px;border:1px solid #222">₹${it.price.toFixed(2)}</td>
+                       <td style="padding:8px;border:1px solid #222">₹${t.toFixed(2)}</td>`;
+      pdfBody.appendChild(row);
+    }
+    wrapper.querySelector('#pdfGrand').textContent = '₹' + total.toFixed(2);
+
+    // render to canvas with html2canvas and convert to blob
+    const canvas = await html2canvas(wrapper, {scale:2, backgroundColor: '#0e0e0f'});
+    return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+  }
+
+  async function generatePdfBlob(filename){
+    const imgBlob = await buildInvoiceHTMLBlob(filename);
+    // use jsPDF to place full-width image on page(s)
+    const img = await createImageBitmap(imgBlob);
+    const pdf = new jsPDF({ unit:'px', format:[img.height, img.width] }); // keep orientation consistent
+    pdf.addImage(img, 'PNG', 0, 0, img.width, img.height);
+    const pdfBlob = pdf.output('blob');
+    return pdfBlob;
+  }
+
+  // Download button just saves PDF locally
+  document.getElementById('downloadPdfBtn').addEventListener('click', async ()=>{
+    const cname = (document.getElementById('custName').value || 'customer').replace(/\s+/g,'_');
+    const filename = `${cname}_Invoice.pdf`;
+    statusMsg.textContent = 'Preparing PDF...';
+    const blob = await generatePdfBlob(filename);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+    statusMsg.textContent = 'Downloaded ✓';
+  });
+
+  // Generate & send to backend
+  document.getElementById('generatePdfBtn').addEventListener('click', async ()=>{
+    // validations
+    const cname = document.getElementById('custName').value.trim();
+    if(!cname){ alert('Please enter customer name'); return; }
+    if(getItems().length === 0){ alert('Add at least one item'); return; }
+
+    const filename = `${cname.replace(/\s+/g,'_')}_Invoice.pdf`;
+    statusMsg.textContent = 'Generating PDF... (may take 2–4s)';
+    try{
+      const pdfBlob = await generatePdfBlob(filename);
+      statusMsg.textContent = 'Sending PDF to server...';
+      const fd = new FormData();
+      fd.append('invoice_pdf', pdfBlob, filename);
+      fd.append('cust_name', document.getElementById('custName').value);
+      fd.append('cust_mobile', document.getElementById('custMobile').value);
+      fd.append('cust_email', document.getElementById('custEmail').value);
+      // POST to backend (change path if placed elsewhere)
+      const resp = await fetch('send_email.php', { method:'POST', body:fd });
+      const j = await resp.json();
+      if(j.success){
+        statusMsg.innerHTML = '<span class="success">✅ Invoice sent by email</span>';
+      } else {
+        statusMsg.textContent = '❌ Failed to send invoice: ' + (j.error || 'server error');
+        alert('Failed to send invoice: ' + (j.error || 'server error'));
+      }
+    }catch(err){
+      console.error(err);
+      statusMsg.textContent = '❌ Error while generating/sending';
+      alert('Error: ' + err.message);
+    }
+  });
+
+  // refresh preview when inputs change
+  document.body.addEventListener('input', refreshPreview);
+
+  </script>
 </body>
 </html>
