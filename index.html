@@ -1,39 +1,67 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Zency Invoice</title>
+  <title>Zency Invoice Generator</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
     <h1>Zency Invoice Generator</h1>
+    <input type="text" id="customerName" placeholder="Customer Name" />
+    <input type="text" id="mobileNumber" placeholder="Mobile Number" />
+    <input type="text" id="address" placeholder="Address" />
 
-    <form id="invoiceForm">
-      <input type="text" placeholder="Customer Name" id="customerName" required />
-      <input type="text" placeholder="Mobile Number" id="customerMobile" required />
-      <input type="text" placeholder="Address" id="customerAddress" required />
-
-      <div id="itemsContainer">
-        <div class="item">
-          <input type="text" placeholder="Item Name" class="itemName" required />
-          <input type="number" placeholder="Qty" class="itemQty" required />
-          <input type="number" placeholder="Price" class="itemPrice" required />
-        </div>
+    <div id="itemsContainer">
+      <div class="item-row">
+        <input type="text" class="itemName" placeholder="Item Name" />
+        <input type="number" class="itemQty" placeholder="Qty" />
+        <input type="number" class="itemPrice" placeholder="Price" />
       </div>
+    </div>
 
-      <button type="button" onclick="addItem()">+ Add Item</button>
-      <button type="submit">Generate & Email Invoice</button>
-    </form>
+    <button onclick="addItem()">+ Add Item</button>
+    <button onclick="generateInvoice()">Generate & Email Invoice</button>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/jspdf"></script>
-  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
   <script>
-    emailjs.init("DiNInZXTSIafrnipS"); // YOUR PUBLIC KEY
+    function addItem() {
+      let container = document.getElementById("itemsContainer");
+      let row = document.createElement("div");
+      row.classList.add("item-row");
+      row.innerHTML = `
+        <input type="text" class="itemName" placeholder="Item Name" />
+        <input type="number" class="itemQty" placeholder="Qty" />
+        <input type="number" class="itemPrice" placeholder="Price" />
+      `;
+      container.appendChild(row);
+    }
+
+    function generateInvoice() {
+      let customer = document.getElementById("customerName").value;
+      let mobile = document.getElementById("mobileNumber").value;
+      let address = document.getElementById("address").value;
+
+      let items = [];
+      document.querySelectorAll(".item-row").forEach(row => {
+        let name = row.querySelector(".itemName").value;
+        let qty = parseInt(row.querySelector(".itemQty").value);
+        let price = parseFloat(row.querySelector(".itemPrice").value);
+        if (name && qty && price) {
+          items.push({ name, qty, price });
+        }
+      });
+
+      if (!customer || !mobile || !address || items.length === 0) {
+        alert("⚠️ Please fill all fields and add at least one item!");
+        return;
+      }
+
+      localStorage.setItem("invoiceData", JSON.stringify({
+        customer, mobile, address, items
+      }));
+
+      window.location.href = "report.html";
+    }
   </script>
-  <script src="js/invoice.js"></script>
-  <script src="js/script.js"></script>
 </body>
 </html>
