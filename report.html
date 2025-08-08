@@ -35,21 +35,19 @@
   <!-- EmailJS Library -->
   <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
   <script>
-    emailjs.init("YOUR_PUBLIC_KEY"); // <-- Yaha apna EmailJS public key daalna
+    // EmailJS init with your public key
+    emailjs.init("DwlVJ3pXk1J3yFeuP"); // <-- tumhara public key
 
-    // Data load from localStorage
     const data = JSON.parse(localStorage.getItem("invoiceData"));
     if (!data) {
       document.body.innerHTML = "<h2>No invoice data found!</h2>";
     } else {
-      // Show customer details
       document.getElementById("customerDetails").innerHTML = `
         <b>Customer Name:</b> ${data.customer} <br>
         <b>Mobile:</b> ${data.mobile} <br>
         <b>Address:</b> ${data.address}
       `;
 
-      // Fill items in table
       let grandTotal = 0;
       let tableRows = "";
       data.items.forEach(item => {
@@ -68,14 +66,13 @@
       document.getElementById("itemTable").innerHTML = tableRows;
       document.getElementById("grandTotal").innerText = "₹" + grandTotal.toFixed(2);
 
-      // Send email
       document.getElementById("sendEmailBtn").addEventListener("click", function(){
-        emailjs.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", {
+        emailjs.send("service_t1zo7wq", "template_2yyf3mj", {
           customer_name: data.customer,
           mobile_number: data.mobile,
           address: data.address,
           total_amount: grandTotal,
-          invoice_details: JSON.stringify(data.items)
+          invoice_details: JSON.stringify(data.items, null, 2)
         }).then(function(response) {
             alert("✅ Invoice sent successfully!");
         }, function(error) {
